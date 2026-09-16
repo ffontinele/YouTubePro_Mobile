@@ -34,8 +34,8 @@ android {
         applicationId = "com.youtube.pro.mobile"
         minSdk = 26
         targetSdk = 36
-        versionCode = 4
-        versionName = "0.34.0"
+        versionCode = 5
+        versionName = "0.34.2"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         resValue("string", "app_name", "YouTube Pro")
     }
