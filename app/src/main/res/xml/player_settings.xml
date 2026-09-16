@@ -154,4 +154,17 @@
 
     </PreferenceCategory>
 
+
+    <SwitchPreferenceCompat
+        android:key="translate_subtitles"
+        android:title="Traduzir legendas"
+        android:summary="Traduz as legendas em tempo real (LibreTranslate)"
+        android:defaultValue="false" />
+    <ListPreference
+        android:key="translation_target_lang"
+        android:title="Idioma da traducao"
+        android:entries="@array/translation_lang_entries"
+        android:entryValues="@array/translation_lang_values"
+        android:defaultValue="pt"
+        android:dependency="translate_subtitles" />
 </PreferenceScreen>

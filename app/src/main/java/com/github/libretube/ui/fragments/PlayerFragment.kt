@@ -1,5 +1,13 @@
 package com.github.libretube.ui.fragments
 
+import android.view.Gravity
+import android.widget.FrameLayout
+import android.widget.TextView
+import androidx.media3.common.text.CueGroup
+import com.github.libretube.helpers.PreferenceHelper
+import com.github.libretube.services.TranslationService
+import kotlinx.coroutines.launch
+
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.Dialog
@@ -122,6 +130,9 @@ import kotlin.math.absoluteValue
 
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 class PlayerFragment : Fragment(R.layout.fragment_player), CustomPlayerCallback {
+
+    private var translationOverlay: TextView? = null
+    private var lastCueText = ""
     private var _binding: FragmentPlayerBinding? = null
     val binding get() = _binding!!
 
@@ -563,6 +574,7 @@ class PlayerFragment : Fragment(R.layout.fragment_player), CustomPlayerCallback 
 
             playerController = it
             playerController.addListener(playerListener)
+            setupSubtitleTranslation(playerController)
             connectToPlayerView(playerController)
             updatePlayPauseButton()
 
@@ -1480,5 +1492,49 @@ class PlayerFragment : Fragment(R.layout.fragment_player), CustomPlayerCallback 
 
     override fun isVideoLive(): Boolean {
         return ::streams.isInitialized && streams.isLive
+    }
+
+    private fun setupSubtitleTranslation(controller: Player) {
+        if (!PreferenceHelper.getBoolean("translate_subtitles", false)) return
+        val targetLang = PreferenceHelper.getString("translation_target_lang", "pt")
+        val overlay = TextView(requireContext()).apply {
+            setTextColor(0xFFFFFFFF.toInt())
+            textSize = 16f
+            setShadowLayer(4f, 2f, 2f, 0xFF000000.toInt())
+            gravity = Gravity.CENTER_HORIZONTAL
+            isVisible = false
+        }
+        val params = FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        ).apply {
+            gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+            bottomMargin = (110 * resources.displayMetrics.density).toInt()
+            marginStart = (24 * resources.displayMetrics.density).toInt()
+            marginEnd = (24 * resources.displayMetrics.density).toInt()
+        }
+        val host = binding.player as? FrameLayout ?: return
+        host.addView(overlay, params)
+        translationOverlay = overlay
+        controller.addListener(object : Player.Listener {
+            override fun onCues(cueGroup: CueGroup) {
+                val text = cueGroup.cues.joinToString("\n") { it.text?.toString().orEmpty() }
+                if (text.isBlank()) {
+                    translationOverlay?.isVisible = false
+                    lastCueText = ""
+                    return
+                }
+                if (text == lastCueText) return
+                lastCueText = text
+                viewLifecycleOwner.lifecycleScope.launch {
+                    val translated = TranslationService.translate(text, "auto", targetLang)
+                        ?: TranslationService.translate(text, "en", targetLang)
+                    if (translated != null) {
+                        translationOverlay?.text = translated
+                        translationOverlay?.isVisible = true
+                    }
+                }
+            }
+        })
     }
 }
