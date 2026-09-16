@@ -15,11 +15,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Java
+      - name: Setup Java 21
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
-          java-version: '17'
+          java-version: '21'
 
       - name: Decode Keystore
         env:
@@ -37,14 +37,20 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: ./gradlew assembleRelease
+        run: ./gradlew assembleRelease --stacktrace
 
       - name: Rename APK to clean name
         run: |
           mkdir -p release
-          APK_PATH=$(find app/build/outputs/apk/release -name "*.apk" | head -n 1)
+          APK_PATH=$(find app/build/outputs -name "*.apk" 2>/dev/null | head -n 1)
+          if [ -z "$APK_PATH" ]; then
+            echo "ERRO: nenhum APK encontrado em app/build/outputs:"
+            find app/build -name "*.apk" 2>/dev/null || echo "(nenhum .apk em app/build)"
+            exit 1
+          fi
           VERSION=$(echo ${{ github.ref_name }} | sed 's/^v//')
           mv "$APK_PATH" "release/YouTubePro-v${VERSION}.apk"
+          echo "APK final: release/YouTubePro-v${VERSION}.apk"
 
       - name: Upload APK as Artifact
         uses: actions/upload-artifact@v4
