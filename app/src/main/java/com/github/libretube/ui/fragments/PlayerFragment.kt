@@ -1097,10 +1097,12 @@ class PlayerFragment : Fragment(R.layout.fragment_player), CustomPlayerCallback 
         // Botao flutuante "Modo TV" no canto inferior direito
         val fab = android.widget.ImageButton(requireContext()).apply {
             setImageResource(android.R.drawable.ic_menu_slideshow)
-            setBackgroundColor(android.graphics.Color.parseColor("#CC000000"))
+            setBackgroundColor(android.graphics.Color.parseColor("#CCFF0000"))
+            contentDescription = "Modo TV (legendas)"
             setOnClickListener { openWebViewPlayer() }
         }
-        val fabParams = FrameLayout.LayoutParams(120, 120).apply {
+        val fabSize = (56 * resources.displayMetrics.density).toInt()
+        val fabParams = FrameLayout.LayoutParams(fabSize, fabSize).apply {
             gravity = Gravity.BOTTOM or Gravity.END
             bottomMargin = (80 * resources.displayMetrics.density).toInt()
             marginEnd = (20 * resources.displayMetrics.density).toInt()
@@ -1562,8 +1564,10 @@ class PlayerFragment : Fragment(R.layout.fragment_player), CustomPlayerCallback 
 
 
     private fun openWebViewPlayer() {
-        val rawId = playerController.currentMediaItem?.mediaId
-        val videoId = Regex("[A-Za-z0-9_-]{11}").find(rawId ?: "")?.value
+        val playerData: PlayerData? = requireArguments().parcelable(IntentData.playerData)
+        val videoId = playerData?.videoId
+            ?: Regex("[A-Za-z0-9_-]{11}").find(playerController.currentMediaItem?.mediaId ?: "")?.value
+            ?: streams.subtitles.firstNotNullOfOrNull { Regex("[?&]v=([A-Za-z0-9_-]{11})").find(it.url ?: "")?.groupValues?.get(1) }
         if (videoId == null) {
             android.widget.Toast.makeText(requireContext(), "ID do video nao encontrado", android.widget.Toast.LENGTH_SHORT).show()
             return
