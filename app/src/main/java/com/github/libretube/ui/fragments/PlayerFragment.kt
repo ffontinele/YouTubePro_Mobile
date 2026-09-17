@@ -1557,20 +1557,22 @@ class PlayerFragment : Fragment(R.layout.fragment_player), CustomPlayerCallback 
             }
             try {
                 toast("Motor: iniciando...")
-                val videoId = playerController.currentMediaItem?.mediaId
+                val rawId = playerController.currentMediaItem?.mediaId
+                val videoId = Regex("[A-Za-z0-9_-]{11}").find(rawId ?: "")?.value
                 var url: String? = null
                 if (videoId == null) {
-                    toast("Motor: videoId nulo")
+                    toast("Motor: videoId nulo (" + rawId + ")")
                 } else {
+                    toast("Motor: id=" + videoId)
+                    var fetchErr = ""
                     val webTracks = withContext(Dispatchers.IO) {
-                        try { SubtitleFetcher.fetchTracks(videoId) } catch (_: Exception) { emptyList() }
+                        try { SubtitleFetcher.fetchTracks(videoId) } catch (e: Exception) { fetchErr = e.message ?: "?"; emptyList() }
                     }
+                    if (webTracks.isEmpty()) toast("Motor: 0 trilhas (" + fetchErr + ")")
                     val picked = webTracks.firstOrNull { !it.auto } ?: webTracks.firstOrNull()
                     if (picked != null) {
                         url = picked.url
                         if (!url!!.contains("fmt=")) url = url + "&fmt=json3"
-                    } else {
-                        toast("Motor: 0 trilhas web")
                     }
                 }
                 if (url == null) {
@@ -1582,6 +1584,7 @@ class PlayerFragment : Fragment(R.layout.fragment_player), CustomPlayerCallback 
                     url = track?.url
                     if (url == null) { toast("Motor: nenhuma trilha local"); return@launch }
                 }
+                var dlErr = ""
                 val content = withContext(Dispatchers.IO) {
                     try {
                         val conn = java.net.URL(url).openConnection() as java.net.HttpURLConnection
@@ -1589,9 +1592,9 @@ class PlayerFragment : Fragment(R.layout.fragment_player), CustomPlayerCallback 
                         conn.readTimeout = 8000
                         conn.setRequestProperty("User-Agent", "Mozilla/5.0")
                         conn.inputStream.bufferedReader().readText()
-                    } catch (_: Exception) { "" }
+                    } catch (e: Exception) { dlErr = e.message ?: "?"; "" }
                 }
-                if (content.isEmpty()) { toast("Motor: download da legenda falhou"); return@launch }
+                if (content.isEmpty()) { toast("Motor: download falhou (" + dlErr + ")"); return@launch }
                 val cues = SubtitleParser.parse(content)
                 if (cues.isEmpty()) { toast("Motor: sem falas (" + content.length + " bytes)"); return@launch }
                 toast("Motor: " + cues.size + " falas ok")

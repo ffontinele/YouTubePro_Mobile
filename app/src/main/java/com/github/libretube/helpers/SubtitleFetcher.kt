@@ -16,10 +16,11 @@ object SubtitleFetcher {
         conn.setRequestProperty("User-Agent", UA)
         conn.setRequestProperty("Accept-Language", "en-US,en;q=0.9")
         conn.setRequestProperty("Cookie", "CONSENT=YES+cb; SOCS=CAI")
+        if (conn.responseCode != 200) throw Exception("HTTP " + conn.responseCode)
         val html = conn.inputStream.bufferedReader().readText()
         val marker = "\"captionTracks\":"
         val idx = html.indexOf(marker)
-        if (idx < 0) return emptyList()
+        if (idx < 0) throw Exception("pagina sem captionTracks, " + html.length + " bytes")
         val start = html.indexOf('[', idx)
         if (start < 0) return emptyList()
         var depth = 0
