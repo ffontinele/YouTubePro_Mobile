@@ -1590,20 +1590,37 @@ class PlayerFragment : Fragment(R.layout.fragment_player), CustomPlayerCallback 
                     url = track?.url
                     if (url == null) { toast("Motor: nenhuma trilha local"); return@launch }
                 }
-                var dlErr = ""
-                val cleanUrl = url!!.replace(Regex("fmt=[a-z0-9]+"), "fmt=json3")
-                val content = withContext(Dispatchers.IO) {
-                    try {
-                        val conn = java.net.URL(cleanUrl).openConnection() as java.net.HttpURLConnection
-                        conn.connectTimeout = 8000
-                        conn.readTimeout = 8000
-                        conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
-                        conn.setRequestProperty("Cookie", "CONSENT=YES+cb; SOCS=CAI")
-                        conn.setRequestProperty("Referer", "https://www.youtube.com/")
-                        conn.inputStream.bufferedReader().readText()
-                    } catch (e: Exception) { dlErr = e.javaClass.simpleName + ": " + (e.message ?: ""); "" }
+                val variants = mutableListOf<String>()
+                variants.add(url!!)
+                variants.add(url!!.replace(Regex("fmt=[a-z0-9]+"), "fmt=json3"))
+                variants.add(url!!.replace(Regex("fmt=[a-z0-9]+"), "fmt=vtt"))
+                val langCode = Regex("[?&]lang=([a-zA-Z-]+)").find(url!!)?.groupValues?.get(1) ?: "pt"
+                val kindPart = if (url!!.contains("kind=asr")) "&kind=asr" else ""
+                variants.add("https://www.youtube.com/api/timedtext?v=" + videoId + "&lang=" + langCode + kindPart + "&fmt=json3")
+                variants.add("https://video.google.com/timedtext?lang=" + langCode + "&v=" + videoId + kindPart + "&fmt=json3")
+                var content = ""
+                var usedVariant = -1
+                val errs = StringBuilder()
+                for ((i, vurl) in variants.withIndex()) {
+                    val res = withContext(Dispatchers.IO) {
+                        try {
+                            val conn = java.net.URL(vurl).openConnection() as java.net.HttpURLConnection
+                            conn.connectTimeout = 8000
+                            conn.readTimeout = 8000
+                            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
+                            conn.setRequestProperty("Cookie", "CONSENT=YES+cb; SOCS=CAI")
+                            conn.setRequestProperty("Referer", "https://www.youtube.com/")
+                            val code = conn.responseCode
+                            if (code == 200) Pair(conn.inputStream.bufferedReader().readText(), 200) else Pair("", code)
+                        } catch (e: Exception) {
+                            Pair("", -1)
+                        }
+                    }
+                    if (res.first.isNotEmpty()) { content = res.first; usedVariant = i; break }
+                    errs.append(i).append(":").append(res.second).append(" ")
                 }
-                if (content.isEmpty()) { toast("Motor: download falhou (" + dlErr + ")"); return@launch }
+                if (content.isEmpty()) { toast("Motor: todas falharam (" + errs + ")"); return@launch }
+                toast("Motor: variante " + usedVariant + " funcionou")
                 val cues = SubtitleParser.parse(content)
                 if (cues.isEmpty()) { toast("Motor: sem falas (" + content.length + " bytes)"); return@launch }
                 toast("Motor: " + cues.size + " falas ok")
