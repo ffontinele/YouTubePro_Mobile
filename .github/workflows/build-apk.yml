@@ -68,6 +68,40 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: release/*.apk
-          body: "YouTube Pro Mobile v${{ github.ref_name }} - YouTube sem anuncios, com SponsorBlock, para Android."
+          body: |
+            # YouTube Pro Mobile v0.35.3
+            
+            O cliente de YouTube com tudo o que voce sempre quis: sem anuncios no modo normal, SponsorBlock, reproducao em segundo plano, downloads e agora o MODO TV com legendas funcionando!
+            
+            ## O que o app tem
+            - Sem anuncios no modo normal (player nativo)
+            - SponsorBlock: pula patrocinios, introducoes e encerramentos automaticamente
+            - Reproducao em segundo plano (so audio com a tela desligada)
+            - Download de videos para assistir offline
+            - Picture-in-Picture (PiP): janelinha flutuante ao sair do app
+            - MODO TV: assista com legendas (oficiais e automaticas) no player integrado
+            - Traducao de legendas em tempo real (LibreTranslate) - experimental
+            - Icone dourado premium e icones alternativos guardados no repositorio
+            
+            ## Novidades da v0.35.3
+            - MODO TV: botao transparente no canto do player abre o video no player web integrado com legendas 100% funcionais
+            - Tela cheia funcionando no Modo TV
+            - PiP corrigido: nao trava mais a tela ao sair do app
+            - Motor proprio de legendas (experimental, silencioso)
+            - Sem mensagens de depuracao na tela
+            
+            ## Como usar o Modo TV (legendas)
+            1. Abra qualquer video no app
+            2. Toque no botao transparente no canto inferior direito do player
+            3. O video abre no player web integrado
+            4. Toque em CC e escolha o idioma: as legendas aparecem
+            5. Use o X no canto para voltar ao app
+            
+            ## Avisos
+            - No Modo TV (site oficial) podem aparecer anuncios; no modo normal nao ha anuncios
+            - A traducao em tempo real depende do servico publico LibreTranslate
+            
+            Instalacao: baixe o APK abaixo e instale por cima da versao anterior, sem desinstalar.
+
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
