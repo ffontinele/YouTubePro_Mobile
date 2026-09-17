@@ -1558,7 +1558,13 @@ class PlayerFragment : Fragment(R.layout.fragment_player), CustomPlayerCallback 
             try {
                 toast("Motor: iniciando...")
                 val rawId = playerController.currentMediaItem?.mediaId
-                val videoId = Regex("[A-Za-z0-9_-]{11}").find(rawId ?: "")?.value
+                var videoId = Regex("[A-Za-z0-9_-]{11}").find(rawId ?: "")?.value
+                if (videoId == null) {
+                    for (sub in streams.subtitles) {
+                        videoId = Regex("[?&]v=([A-Za-z0-9_-]{11})").find(sub.url ?: "")?.groupValues?.get(1)
+                        if (videoId != null) break
+                    }
+                }
                 var url: String? = null
                 if (videoId == null) {
                     toast("Motor: videoId nulo (" + rawId + ")")
@@ -1585,14 +1591,17 @@ class PlayerFragment : Fragment(R.layout.fragment_player), CustomPlayerCallback 
                     if (url == null) { toast("Motor: nenhuma trilha local"); return@launch }
                 }
                 var dlErr = ""
+                val cleanUrl = url!!.replace(Regex("fmt=[a-z0-9]+"), "fmt=json3")
                 val content = withContext(Dispatchers.IO) {
                     try {
-                        val conn = java.net.URL(url).openConnection() as java.net.HttpURLConnection
+                        val conn = java.net.URL(cleanUrl).openConnection() as java.net.HttpURLConnection
                         conn.connectTimeout = 8000
                         conn.readTimeout = 8000
-                        conn.setRequestProperty("User-Agent", "Mozilla/5.0")
+                        conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
+                        conn.setRequestProperty("Cookie", "CONSENT=YES+cb; SOCS=CAI")
+                        conn.setRequestProperty("Referer", "https://www.youtube.com/")
                         conn.inputStream.bufferedReader().readText()
-                    } catch (e: Exception) { dlErr = e.message ?: "?"; "" }
+                    } catch (e: Exception) { dlErr = e.javaClass.simpleName + ": " + (e.message ?: ""); "" }
                 }
                 if (content.isEmpty()) { toast("Motor: download falhou (" + dlErr + ")"); return@launch }
                 val cues = SubtitleParser.parse(content)
