@@ -1426,7 +1426,8 @@ class PlayerFragment : Fragment(R.layout.fragment_player), CustomPlayerCallback 
                 && PictureInPictureCompat.isPictureInPictureEnabled(requireContext())
 
     private fun shouldStartPiP(): Boolean {
-        return isPipAvailable() && ::playerController.isInitialized && playerController.isPlaying
+        val pipEnabled = PreferenceHelper.getBoolean("pip_auto", false)
+        return pipEnabled && isPipAvailable() && ::playerController.isInitialized && playerController.isPlaying
     }
 
     /**
