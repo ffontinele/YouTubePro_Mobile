@@ -1097,7 +1097,7 @@ class PlayerFragment : Fragment(R.layout.fragment_player), CustomPlayerCallback 
         // Botao flutuante "Modo TV" no canto inferior direito
         val fab = android.widget.ImageButton(requireContext()).apply {
             setImageResource(android.R.drawable.ic_menu_slideshow)
-            setBackgroundColor(android.graphics.Color.parseColor("#CCFF0000"))
+            setBackgroundColor(android.graphics.Color.parseColor("#CC000000"))
             contentDescription = "Modo TV (legendas)"
             setOnClickListener { openWebViewPlayer() }
         }
@@ -1583,9 +1583,7 @@ class PlayerFragment : Fragment(R.layout.fragment_player), CustomPlayerCallback 
         val translateEnabled = PreferenceHelper.getBoolean("translate_subtitles", false)
         val targetLang = PreferenceHelper.getString("translation_target_lang", "pt")
         viewLifecycleOwner.lifecycleScope.launch {
-            val toast: (String) -> Unit = { msg ->
-                try { android.widget.Toast.makeText(requireContext(), msg, android.widget.Toast.LENGTH_LONG).show() } catch (_: Exception) {}
-            }
+            val toast: (String) -> Unit = { _ -> }
             try {
                 toast("Motor: iniciando...")
                 val rawId = playerController.currentMediaItem?.mediaId
