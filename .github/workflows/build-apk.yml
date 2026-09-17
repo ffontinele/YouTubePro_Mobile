@@ -64,6 +64,7 @@ jobs:
           path: release/*.apk
 
       - name: Create GitHub Release
+        if: ${{ !contains(github.ref_name, '-test') }}
         uses: softprops/action-gh-release@v2
         with:
           files: release/*.apk
