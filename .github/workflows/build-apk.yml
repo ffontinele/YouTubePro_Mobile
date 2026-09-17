@@ -69,26 +69,24 @@ jobs:
         with:
           files: release/*.apk
           body: |
-            # YouTube Pro Mobile v0.35.3
+            # YouTube Pro Mobile v0.35.4
             
-            O cliente de YouTube com tudo o que voce sempre quis: sem anuncios no modo normal, SponsorBlock, reproducao em segundo plano, downloads e agora o MODO TV com legendas funcionando!
+            O cliente de YouTube sem anuncios no modo normal, com SponsorBlock, segundo plano, downloads, PiP e o MODO TV com legendas funcionando!
             
             ## O que o app tem
             - Sem anuncios no modo normal (player nativo)
-            - SponsorBlock: pula patrocinios, introducoes e encerramentos automaticamente
+            - SponsorBlock: pula patrocinios, introducoes e encerramentos
             - Reproducao em segundo plano (so audio com a tela desligada)
             - Download de videos para assistir offline
-            - Picture-in-Picture (PiP): janelinha flutuante ao sair do app
-            - MODO TV: assista com legendas (oficiais e automaticas) no player integrado
-            - Traducao de legendas em tempo real (LibreTranslate) - experimental
-            - Icone dourado premium e icones alternativos guardados no repositorio
+            - Picture-in-Picture: janelinha flutuante ao sair do app (sempre ativa, sem travamentos)
+            - MODO TV: assista com legendas (oficiais e automaticas) no player web integrado
+            - Icone dourado premium
             
-            ## Novidades da v0.35.3
-            - MODO TV: botao transparente no canto do player abre o video no player web integrado com legendas 100% funcionais
-            - Tela cheia funcionando no Modo TV
-            - PiP corrigido: nao trava mais a tela ao sair do app
-            - Motor proprio de legendas (experimental, silencioso)
-            - Sem mensagens de depuracao na tela
+            ## Novidades da v0.35.4 (limpeza)
+            - Removidos recursos experimentais que nao funcionavam: motor de legendas nativo, traducao automatica e interruptor de PiP
+            - PiP agora e sempre ativo (comportamento estavel, sem bug de tela)
+            - Configuracoes do Player limpas, sem opcoes enganosas
+            - MODO TV mantido: e a solucao oficial de legendas
             
             ## Como usar o Modo TV (legendas)
             1. Abra qualquer video no app
@@ -99,9 +97,7 @@ jobs:
             
             ## Avisos
             - No Modo TV (site oficial) podem aparecer anuncios; no modo normal nao ha anuncios
-            - A traducao em tempo real depende do servico publico LibreTranslate
             
             Instalacao: baixe o APK abaixo e instale por cima da versao anterior, sem desinstalar.
-
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

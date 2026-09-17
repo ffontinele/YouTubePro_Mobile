@@ -1,7 +1,5 @@
 package com.github.libretube.ui.fragments
 
-import com.github.libretube.helpers.SubtitleParser
-import com.github.libretube.helpers.SubtitleFetcher
 import com.github.libretube.ui.activities.WebViewPlayerActivity
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -10,9 +8,7 @@ import kotlinx.coroutines.withContext
 import android.view.Gravity
 import android.widget.FrameLayout
 import android.widget.TextView
-import androidx.media3.common.text.CueGroup
 import com.github.libretube.helpers.PreferenceHelper
-import com.github.libretube.services.TranslationService
 import kotlinx.coroutines.launch
 
 import android.annotation.SuppressLint
@@ -138,8 +134,6 @@ import kotlin.math.absoluteValue
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 class PlayerFragment : Fragment(R.layout.fragment_player), CustomPlayerCallback {
 
-    private var translationOverlay: TextView? = null
-    private var lastCueText = ""
     private var _binding: FragmentPlayerBinding? = null
     val binding get() = _binding!!
 
@@ -581,7 +575,6 @@ class PlayerFragment : Fragment(R.layout.fragment_player), CustomPlayerCallback 
 
             playerController = it
             playerController.addListener(playerListener)
-            setupSubtitleTranslation(playerController)
             connectToPlayerView(playerController)
             updatePlayPauseButton()
 
@@ -1092,7 +1085,6 @@ class PlayerFragment : Fragment(R.layout.fragment_player), CustomPlayerCallback 
 
         // set the default subtitle if available
         binding.player.updateCurrentSubtitle(viewModel.currentCaptionId)
-        setupOwnSubtitles()
 
         // Botao flutuante "Modo TV" no canto inferior direito
         val fab = android.widget.ImageButton(requireContext()).apply {
@@ -1443,8 +1435,7 @@ class PlayerFragment : Fragment(R.layout.fragment_player), CustomPlayerCallback 
                 && PictureInPictureCompat.isPictureInPictureEnabled(requireContext())
 
     private fun shouldStartPiP(): Boolean {
-        val pipEnabled = PreferenceHelper.getBoolean("pip_auto", false)
-        return pipEnabled && isPipAvailable() && ::playerController.isInitialized && playerController.isPlaying
+        return isPipAvailable() && ::playerController.isInitialized && playerController.isPlaying
     }
 
     /**
@@ -1518,49 +1509,7 @@ class PlayerFragment : Fragment(R.layout.fragment_player), CustomPlayerCallback 
         return ::streams.isInitialized && streams.isLive
     }
 
-    private fun setupSubtitleTranslation(controller: Player) {
-        if (!PreferenceHelper.getBoolean("translate_subtitles", false)) return
-        val targetLang = PreferenceHelper.getString("translation_target_lang", "pt")
-        val overlay = TextView(requireContext()).apply {
-            setTextColor(0xFFFFFFFF.toInt())
-            textSize = 16f
-            setShadowLayer(4f, 2f, 2f, 0xFF000000.toInt())
-            gravity = Gravity.CENTER_HORIZONTAL
-            isVisible = false
-        }
-        val params = FrameLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT
-        ).apply {
-            gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
-            bottomMargin = (110 * resources.displayMetrics.density).toInt()
-            marginStart = (24 * resources.displayMetrics.density).toInt()
-            marginEnd = (24 * resources.displayMetrics.density).toInt()
-        }
-        val host = binding.player as? FrameLayout ?: return
-        host.addView(overlay, params)
-        translationOverlay = overlay
-        controller.addListener(object : Player.Listener {
-            override fun onCues(cueGroup: CueGroup) {
-                val text = cueGroup.cues.joinToString("\n") { it.text?.toString().orEmpty() }
-                if (text.isBlank()) {
-                    translationOverlay?.isVisible = false
-                    lastCueText = ""
-                    return
-                }
-                if (text == lastCueText) return
-                lastCueText = text
-                viewLifecycleOwner.lifecycleScope.launch {
-                    val translated = TranslationService.translate(text, "auto", targetLang)
-                        ?: TranslationService.translate(text, "en", targetLang)
-                    if (translated != null) {
-                        translationOverlay?.text = translated
-                        translationOverlay?.isVisible = true
-                    }
-                }
-            }
-        })
-    }
+
 
 
     private fun openWebViewPlayer() {
@@ -1577,127 +1526,6 @@ class PlayerFragment : Fragment(R.layout.fragment_player), CustomPlayerCallback 
         startActivity(intent)
     }
 
-    private fun setupOwnSubtitles() {
-        val ownEnabled = PreferenceHelper.getBoolean("own_subtitles", false)
-        if (!ownEnabled) return
-        val translateEnabled = PreferenceHelper.getBoolean("translate_subtitles", false)
-        val targetLang = PreferenceHelper.getString("translation_target_lang", "pt")
-        viewLifecycleOwner.lifecycleScope.launch {
-            val toast: (String) -> Unit = { _ -> }
-            try {
-                toast("Motor: iniciando...")
-                val rawId = playerController.currentMediaItem?.mediaId
-                var videoId = Regex("[A-Za-z0-9_-]{11}").find(rawId ?: "")?.value
-                if (videoId == null) {
-                    for (sub in streams.subtitles) {
-                        videoId = Regex("[?&]v=([A-Za-z0-9_-]{11})").find(sub.url ?: "")?.groupValues?.get(1)
-                        if (videoId != null) break
-                    }
-                }
-                var url: String? = null
-                if (videoId == null) {
-                    toast("Motor: videoId nulo (" + rawId + ")")
-                } else {
-                    toast("Motor: id=" + videoId)
-                    var fetchErr = ""
-                    val webTracks = withContext(Dispatchers.IO) {
-                        try { SubtitleFetcher.fetchTracks(videoId) } catch (e: Exception) { fetchErr = e.message ?: "?"; emptyList() }
-                    }
-                    if (webTracks.isEmpty()) toast("Motor: 0 trilhas (" + fetchErr + ")")
-                    val picked = webTracks.firstOrNull { !it.auto } ?: webTracks.firstOrNull()
-                    if (picked != null) {
-                        url = picked.url
-                        if (!url!!.contains("fmt=")) url = url + "&fmt=json3"
-                    }
-                }
-                if (url == null) {
-                    val tracks = streams.subtitles
-                    val selected = viewModel.currentCaptionId
-                    val track = tracks.firstOrNull { it.code == selected }
-                        ?: tracks.firstOrNull { it.autoGenerated != true }
-                        ?: tracks.firstOrNull()
-                    url = track?.url
-                    if (url == null) { toast("Motor: nenhuma trilha local"); return@launch }
-                }
-                val variants = mutableListOf<String>()
-                variants.add(url!!)
-                variants.add(url!!.replace(Regex("fmt=[a-z0-9]+"), "fmt=json3"))
-                variants.add(url!!.replace(Regex("fmt=[a-z0-9]+"), "fmt=vtt"))
-                val langCode = Regex("[?&]lang=([a-zA-Z-]+)").find(url!!)?.groupValues?.get(1) ?: "pt"
-                val kindPart = if (url!!.contains("kind=asr")) "&kind=asr" else ""
-                variants.add("https://www.youtube.com/api/timedtext?v=" + videoId + "&lang=" + langCode + kindPart + "&fmt=json3")
-                variants.add("https://video.google.com/timedtext?lang=" + langCode + "&v=" + videoId + kindPart + "&fmt=json3")
-                var content = ""
-                var usedVariant = -1
-                val errs = StringBuilder()
-                for ((i, vurl) in variants.withIndex()) {
-                    val res = withContext(Dispatchers.IO) {
-                        try {
-                            val conn = java.net.URL(vurl).openConnection() as java.net.HttpURLConnection
-                            conn.connectTimeout = 8000
-                            conn.readTimeout = 8000
-                            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
-                            conn.setRequestProperty("Cookie", "CONSENT=YES+cb; SOCS=CAI")
-                            conn.setRequestProperty("Referer", "https://www.youtube.com/")
-                            val code = conn.responseCode
-                            if (code == 200) Pair(conn.inputStream.bufferedReader().readText(), 200) else Pair("", code)
-                        } catch (e: Exception) {
-                            Pair("", -1)
-                        }
-                    }
-                    if (res.first.isNotEmpty()) { content = res.first; usedVariant = i; break }
-                    errs.append(i).append(":").append(res.second).append(" ")
-                }
-                if (content.isEmpty()) { toast("Motor: todas falharam (" + errs + ")"); return@launch }
-                toast("Motor: variante " + usedVariant + " funcionou")
-                val cues = SubtitleParser.parse(content)
-                if (cues.isEmpty()) { toast("Motor: sem falas (" + content.length + " bytes)"); return@launch }
-                toast("Motor: " + cues.size + " falas ok")
-                val overlay = TextView(requireContext()).apply {
-                    setTextColor(0xFFFFFFFF.toInt())
-                    textSize = 16f
-                    setShadowLayer(4f, 2f, 2f, 0xFF000000.toInt())
-                    gravity = Gravity.CENTER_HORIZONTAL
-                    isVisible = false
-                }
-                val params = FrameLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT
-                ).apply {
-                    gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
-                    bottomMargin = (110 * resources.displayMetrics.density).toInt()
-                    marginStart = (24 * resources.displayMetrics.density).toInt()
-                    marginEnd = (24 * resources.displayMetrics.density).toInt()
-                }
-                val host = binding.player as? FrameLayout ?: return@launch
-                host.addView(overlay, params)
-                var lastShown = ""
-                while (isActive && _binding != null) {
-                    val pos = playerController.currentPosition
-                    val cue = cues.firstOrNull { pos in it.start..it.end }
-                    if (cue == null) {
-                        if (lastShown.isNotEmpty()) {
-                            overlay.isVisible = false
-                            lastShown = ""
-                        }
-                    } else if (cue.text != lastShown) {
-                        lastShown = cue.text
-                        val shown = if (translateEnabled) {
-                            TranslationService.translate(cue.text, "auto", targetLang)
-                                ?: TranslationService.translate(cue.text, "en", targetLang)
-                                ?: cue.text
-                        } else {
-                            cue.text
-                        }
-                        overlay.text = shown
-                        overlay.isVisible = true
-                    }
-                    delay(200)
-                }
-            } catch (e: Exception) {
-                toast("Motor erro: " + (e.message ?: e.javaClass.simpleName))
-            }
-        }
-    }
+
 
 }

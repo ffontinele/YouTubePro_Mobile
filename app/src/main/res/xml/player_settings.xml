@@ -155,26 +155,8 @@
     </PreferenceCategory>
 
 
-    <SwitchPreferenceCompat
-        android:key="own_subtitles"
-        android:title="Legendas proprias (YouTube Pro)"
-        android:summary="Motor proprio de legendas: funciona no modo local, sem depender do CC"
-        android:defaultValue="false" />
-    <SwitchPreferenceCompat
-        android:key="translate_subtitles"
-        android:title="Traduzir legendas"
-        android:summary="Traduz as legendas em tempo real (LibreTranslate)"
-        android:defaultValue="false" />
-    <ListPreference
-        android:key="translation_target_lang"
-        android:title="Idioma da traducao"
-        android:entries="@array/translation_lang_entries"
-        android:entryValues="@array/translation_lang_values"
-        android:defaultValue="pt"
-        android:dependency="translate_subtitles" />
-    <SwitchPreferenceCompat
-        android:key="pip_auto"
-        android:title="PiP automatico (ativado por padrao)"
-        android:summary="Ativa janelinha flutuante ao sair do app. Funciona na maioria dos celulares."
-        android:defaultValue="false" />
+
+
+
+
 </PreferenceScreen>
