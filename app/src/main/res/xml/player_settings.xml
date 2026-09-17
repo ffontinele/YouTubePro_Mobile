@@ -174,7 +174,7 @@
         android:dependency="translate_subtitles" />
     <SwitchPreferenceCompat
         android:key="pip_auto"
-        android:title="PiP automatico (desligado por padrao)"
-        android:summary="Ativa janelinha flutuante ao sair do app. Pode travar em alguns celulares."
+        android:title="PiP automatico (ativado por padrao)"
+        android:summary="Ativa janelinha flutuante ao sair do app. Funciona na maioria dos celulares."
         android:defaultValue="false" />
 </PreferenceScreen>
