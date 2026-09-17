@@ -425,6 +425,11 @@
             android:name=".receivers.NotificationReceiver"
             android:enabled="true"
             android:exported="false" />
+            <activity
+            android:name=".ui.activities.WebViewPlayerActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:theme="@style/Theme.AppCompat.NoActionBar"
+            android:exported="false" />
     </application>
 
     <queries>

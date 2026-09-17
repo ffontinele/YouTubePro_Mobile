@@ -2,6 +2,7 @@ package com.github.libretube.ui.fragments
 
 import com.github.libretube.helpers.SubtitleParser
 import com.github.libretube.helpers.SubtitleFetcher
+import com.github.libretube.ui.activities.WebViewPlayerActivity
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
@@ -1093,6 +1094,19 @@ class PlayerFragment : Fragment(R.layout.fragment_player), CustomPlayerCallback 
         binding.player.updateCurrentSubtitle(viewModel.currentCaptionId)
         setupOwnSubtitles()
 
+        // Botao flutuante "Modo TV" no canto inferior direito
+        val fab = android.widget.ImageButton(requireContext()).apply {
+            setImageResource(android.R.drawable.ic_menu_slideshow)
+            setBackgroundColor(android.graphics.Color.parseColor("#CC000000"))
+            setOnClickListener { openWebViewPlayer() }
+        }
+        val fabParams = FrameLayout.LayoutParams(120, 120).apply {
+            gravity = Gravity.BOTTOM or Gravity.END
+            bottomMargin = (80 * resources.displayMetrics.density).toInt()
+            marginEnd = (20 * resources.displayMetrics.density).toInt()
+        }
+        (binding.player as? FrameLayout)?.addView(fab, fabParams)
+
         // set the default resolution
         binding.player.setToDefaultResolution()
 
@@ -1544,6 +1558,19 @@ class PlayerFragment : Fragment(R.layout.fragment_player), CustomPlayerCallback 
                 }
             }
         })
+    }
+
+
+    private fun openWebViewPlayer() {
+        val rawId = playerController.currentMediaItem?.mediaId
+        val videoId = Regex("[A-Za-z0-9_-]{11}").find(rawId ?: "")?.value
+        if (videoId == null) {
+            android.widget.Toast.makeText(requireContext(), "ID do video nao encontrado", android.widget.Toast.LENGTH_SHORT).show()
+            return
+        }
+        val intent = Intent(requireContext(), WebViewPlayerActivity::class.java)
+        intent.putExtra("video_id", videoId)
+        startActivity(intent)
     }
 
     private fun setupOwnSubtitles() {
